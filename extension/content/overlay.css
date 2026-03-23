@@ -1,0 +1,192 @@
+/* overlay.css — injected into streaming pages */
+
+#wp-overlay {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 280px;
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 107, 107, 0.25);
+  border-radius: 14px;
+  z-index: 2147483647;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #f0f0f5;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+  transition: box-shadow 0.2s;
+  user-select: none;
+}
+
+#wp-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  cursor: move;
+  background: rgba(255,107,107,0.08);
+  flex-shrink: 0;
+}
+
+#wp-logo {
+  font-weight: 700;
+  font-size: 12px;
+  color: #ff6b6b;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+#wp-room-badge {
+  background: rgba(255,107,107,0.15);
+  color: #ff6b6b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,107,107,0.3);
+}
+
+#wp-toggle, #wp-minimize {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+#wp-toggle:hover, #wp-minimize:hover { color: #fff; }
+
+#wp-members {
+  display: flex;
+  gap: 5px;
+  padding: 8px 12px 6px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  flex-wrap: wrap;
+}
+
+.wp-member-dot {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: default;
+}
+
+#wp-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 80px;
+  max-height: 250px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+#wp-messages::-webkit-scrollbar { width: 4px; }
+#wp-messages::-webkit-scrollbar-track { background: transparent; }
+#wp-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+.wp-msg {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(240,240,245,0.85);
+  word-break: break-word;
+}
+
+.wp-msg-system {
+  text-align: center;
+  color: rgba(255,255,255,0.35);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.wp-sender {
+  font-weight: 600;
+  margin-right: 3px;
+}
+
+#wp-reactions-area {
+  position: absolute;
+  bottom: 60px;
+  left: 0; right: 0;
+  height: 120px;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wp-reaction-pop {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: wp-float 2.5s ease-out forwards;
+  text-align: center;
+}
+
+@keyframes wp-float {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  15% { transform: translateY(-10px) scale(1.1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(-110px) scale(0.9); opacity: 0; }
+}
+
+#wp-input-row {
+  padding: 8px 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+#wp-input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #f0f0f5;
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  margin-bottom: 6px;
+}
+
+#wp-input:focus { border-color: rgba(255,107,107,0.5); }
+#wp-input::placeholder { color: rgba(255,255,255,0.25); }
+
+#wp-emoji-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.wp-emoji-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 3px 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  line-height: 1;
+}
+.wp-emoji-btn:hover {
+  background: rgba(255,255,255,0.12);
+  transform: scale(1.2);
+}

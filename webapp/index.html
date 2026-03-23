@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WatchParty — Join a Session</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    :root {
+      --bg: #07070d;
+      --surface: #0f0f1a;
+      --card: #13131f;
+      --border: #1a1a2e;
+      --accent: #ff6b6b;
+      --accent2: #4ecdc4;
+      --accent3: #ffe66d;
+      --text: #eeeef5;
+      --muted: #5a5a75;
+      --green: #4ade80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: -50%;
+      background: radial-gradient(ellipse at 20% 20%, rgba(255,107,107,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 80%, rgba(78,205,196,0.07) 0%, transparent 50%),
+                  radial-gradient(ellipse at 50% 50%, rgba(167,139,250,0.04) 0%, transparent 60%);
+      animation: bgShift 12s ease-in-out infinite alternate;
+    }
+    @keyframes bgShift {
+      from { transform: rotate(0deg) scale(1); }
+      to { transform: rotate(8deg) scale(1.05); }
+    }
+
+    /* Noise grain overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 460px;
+      padding: 24px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Logo */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px rgba(255,107,107,0.3);
+    }
+    .brand-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    .brand-name em { color: var(--accent); font-style: normal; }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .card-sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 28px;
+      font-weight: 300;
+    }
+
+    /* Room code display */
+    .room-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,107,107,0.1);
+      border: 1px solid rgba(255,107,107,0.25);
+      border-radius: 100px;
+      padding: 5px 14px 5px 8px;
+      margin-bottom: 28px;
+    }
+    .room-pill-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(255,107,107,0); }
+    }
+    .room-pill-text {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Inputs */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .field input {
+      width: 100%;
+      padding: 13px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,107,107,0.12);
+    }
+    .field input::placeholder { color: var(--muted); }
+    .field input.code-input {
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      font-size: 20px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* Button */
+    .btn-main {
+      width: 100%;
+      padding: 15px;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .btn-main::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    }
+    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,107,107,0.4); }
+    .btn-main:active { transform: translateY(0); }
+    .btn-main:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    /* Error */
+    .error {
+      color: var(--accent);
+      font-size: 12px;
+      margin-top: 12px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    /* ─── Connected state ─── */
+    .connected-card { display: none; }
+    .connected-card.show { display: block; }
+    .home-card { display: block; }
+    .home-card.hide { display: none; }
+
+    .success-icon {
+      width: 60px; height: 60px;
+      background: rgba(74,222,128,0.1);
+      border: 2px solid var(--green);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 20px;
+      box-shadow: 0 0 20px rgba(74,222,128,0.2);
+    }
+
+    .conn-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .conn-sub {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 24px;
+      font-weight: 300;
+    }
+
+    .members-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .member-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .member-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .install-hint {
+      background: rgba(255,230,109,0.07);
+      border: 1px solid rgba(255,230,109,0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 12.5px;
+      color: rgba(255,230,109,0.85);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .install-hint strong { display: block; font-weight: 600; margin-bottom: 4px; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Chat panel (visible once connected) */
+    .chat-panel {
+      margin-top: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .chat-messages {
+      padding: 12px 14px;
+      height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .chat-msg { font-size: 13px; line-height: 1.5; }
+    .chat-msg-system { color: var(--muted); font-style: italic; font-size: 11px; text-align: center; }
+    .chat-sender { font-weight: 600; margin-right: 4px; }
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .chat-input-row input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .chat-input-row input:focus { border-color: var(--accent); }
+    .chat-input-row input::placeholder { color: var(--muted); }
+    .chat-send {
+      padding: 8px 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      transition: all 0.2s;
+    }
+    .chat-send:hover { opacity: 0.85; }
+
+    .emoji-bar { display: flex; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--border); }
+    .emoji-btn-web {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 4px 7px;
+      font-size: 17px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .emoji-btn-web:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <div class="brand-icon">🎬</div>
+      <div class="brand-name">Watch<em>Party</em></div>
+    </div>
+
+    <!-- Join / Home Card -->
+    <div class="card home-card" id="home-card">
+      <h2 class="card-title">Join a Party</h2>
+      <p class="card-sub">Enter the room code your host shared with you.</p>
+
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="guest-name" placeholder="e.g. Alex" maxlength="20" />
+      </div>
+      <div class="field">
+        <label>Room Code</label>
+        <input type="text" class="code-input" id="room-code" placeholder="XXXXXXXX" maxlength="8" />
+      </div>
+
+      <button class="btn-main" id="btn-join">Join Party →</button>
+      <div class="error" id="join-error"></div>
+    </div>
+
+    <!-- Connected Card -->
+    <div class="card connected-card" id="connected-card">
+      <div class="success-icon">🎉</div>
+      <div class="conn-title">You're in the party!</div>
+      <p class="conn-sub">Connected to room <strong id="conn-room-id" style="color:var(--accent)"></strong></p>
+
+      <div class="members-grid" id="conn-members"></div>
+
+      <div class="install-hint">
+        <strong>💡 Tip: Install the WatchParty Extension</strong>
+        Load the <code>extension/</code> folder in Chrome (Developer Mode → Load unpacked) to get the in-video overlay and automatic sync on any streaming site.
+      </div>
+
+      <div class="chat-panel">
+        <div class="chat-header">💬 Party Chat</div>
+        <div class="chat-messages" id="web-messages"></div>
+        <div class="emoji-bar">
+          ${['😂','😍','😱','👏','🔥','💀'].map(e => `<button class="emoji-btn-web" data-emoji="${e}">${e}</button>`).join('')}
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="web-chat-input" placeholder="Say something..." maxlength="200" />
+          <button class="chat-send" id="web-send">Send</button>
+        </div>
+      </div>
+
+      <br/>
+      <button class="btn-secondary" id="btn-leave">Leave Party</button>
+    </div>
+  </div>
+
+  <script>
+    const SERVER = 'http://localhost:3000';
+    let socket = null;
+    let myRoomId = null;
+    let myName = null;
+    let myMember = null;
+
+    // Auto-fill room code from URL /join/XXXXXXXX
+    const pathMatch = location.pathname.match(/\/join\/([A-Z0-9]{6,8})/i);
+    if (pathMatch) document.getElementById('room-code').value = pathMatch[1].toUpperCase();
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function addWebMessage({ sender, color, text, system }) {
+      const msgs = document.getElementById('web-messages');
+      const div = document.createElement('div');
+      div.className = system ? 'chat-msg chat-msg-system' : 'chat-msg';
+      if (system) div.textContent = text;
+      else div.innerHTML = `<span class="chat-sender" style="color:${color}">${escHtml(sender)}</span>${escHtml(text)}`;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function renderConnMembers(members) {
+      const COLORS = ['#FF6B6B','#4ECDC4','#FFE66D','#A78BFA'];
+      document.getElementById('conn-members').innerHTML = members.map((m, i) =>
+        `<div class="member-card">
+          <div class="member-avatar" style="background:${m.color}22;color:${m.color};border:2px solid ${m.color}44">
+            ${m.isHost ? '👑' : m.name[0].toUpperCase()}
+          </div>
+          <span>${escHtml(m.name)}</span>
+          ${m.isHost ? '<span style="font-size:10px;color:var(--muted);margin-left:auto">host</span>' : ''}
+        </div>`
+      ).join('');
+    }
+
+    function showConnected(roomId, room) {
+      myRoomId = roomId;
+      document.getElementById('home-card').classList.add('hide');
+      document.getElementById('connected-card').classList.add('show');
+      document.getElementById('conn-room-id').textContent = roomId;
+      renderConnMembers(room.members);
+    }
+
+    document.getElementById('btn-join').addEventListener('click', () => {
+      const name = document.getElementById('guest-name').value.trim() || 'Guest' + Math.floor(Math.random() * 99);
+      const code = document.getElementById('room-code').value.trim().toUpperCase();
+      const errEl = document.getElementById('join-error');
+
+      if (code.length < 6) { errEl.textContent = 'Please enter a valid room code.'; return; }
+      errEl.textContent = '';
+      myName = name;
+
+      socket = io(SERVER, { transports: ['websocket'] });
+
+      socket.on('connect_error', () => { errEl.textContent = 'Cannot reach server. Is it running?'; });
+
+      socket.on('connect', () => {
+        socket.emit('guest-join', { roomId: code, name });
+      });
+
+      socket.on('error', (msg) => { errEl.textContent = msg; socket.disconnect(); });
+
+      socket.on('joined', ({ roomId, member, room, syncState }) => {
+        myMember = member;
+        showConnected(roomId, room);
+        addWebMessage({ system: true, text: `You joined the party! 🎉` });
+      });
+
+      socket.on('member-update', renderConnMembers);
+      socket.on('chat-message', addWebMessage);
+
+      socket.on('reaction', ({ name, color, emoji }) => {
+        addWebMessage({ system: true, text: `${name} reacted ${emoji}` });
+      });
+
+      socket.on('host-left', () => {
+        addWebMessage({ system: true, text: '👋 Host ended the party.' });
+      });
+    });
+
+    // Chat
+    function sendChat() {
+      const input = document.getElementById('web-chat-input');
+      const text = input.value.trim();
+      if (!text || !socket) return;
+      socket.emit('chat-message', { roomId: myRoomId, text });
+      input.value = '';
+    }
+    document.getElementById('web-send').addEventListener('click', sendChat);
+    document.getElementById('web-chat-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendChat();
+    });
+
+    // Emoji reactions
+    document.querySelectorAll('.emoji-btn-web').forEach(btn => {
+      btn.addEventListener('click', () => {
+        socket?.emit('reaction', { roomId: myRoomId, emoji: btn.dataset.emoji });
+      });
+    });
+
+    document.getElementById('btn-leave').addEventListener('click', () => {
+      socket?.disconnect();
+      document.getElementById('connected-card').classList.remove('show');
+      document.getElementById('home-card').classList.remove('hide');
+    });
+  </script>
+</body>
+</html>
